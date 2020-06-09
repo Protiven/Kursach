@@ -13,6 +13,7 @@ using namespace std;
 #define PI 3.141592653589793  // число Пи
 #define MAXITER 1000        // количество итераций
 #define MEMORY	200000	   // объем памяти
+#define N_MAX 100
 
 typedef double type_;
 
@@ -51,24 +52,24 @@ int count_t;
 int stat_read = 0;
 
 int	LU();		    // функция факторизации		 
-void  assembling(vector<type_> prev_resh);	// cборка глобальной матрицы			
+void  assembling(vector<type_> prev_resh, type_);	// cборка глобальной матрицы			
 void  GetInfo();	// получение параметов				
 void  ReadGrid();	// чтение сетки	
 
-void ReadStartCond(vector<type_>& a);       // Считывание начальных условий
+void ReadStartCond(vector<type_>& a, type_);       // Считывание начальных условий
 void    AddToMatrix(int, int, type_);	     // добаление в матрицу				
 type_    GetLambda(type_, type_);		         // коэффициент лямбда				
 type_    GetGamma(type_, type_);		         // коэффициент гамма		 
-type_    GetF(type_, type_);			         // правая часть		 
-type_    GetIdeal(type_, type_);		         // точное решение		  
+type_    GetF(type_, type_, type_);			         // правая часть		 
+type_    GetIdeal(type_, type_, type_);		         // точное решение		  
 void    GaussL(type_*, type_*);		         // Решение СЛАУ		
 void	  GaussU(type_*, type_*);		         // Решение СЛАУ		
 void	  MultMatrixOnVector(type_*, type_*);	 // Умножение матрицы на вектор		 
 type_   ScalarMult(type_*, type_*);			 // Скалярное произведение векторов
 type_   sum(int, int);	                     // Скалярное произведение факторизации		
-void    method();				             // Сборка метода
+void    method(type_);				             // Сборка метода
 void    run();			                     // Выполнение метода	
-void    result();                            // Вывод результата в файл     
+void    result(type_);                            // Вывод результата в файл     
 
 
 //	Задание парамметров и функции
@@ -80,16 +81,16 @@ type_ GetGamma(type_ x, type_ y) {
 	return 0;
 }
 
-type_ GetF(type_ x, type_ y) {
+type_ GetF(type_ x, type_ y, type_ t) {
 	return -12 * x * x - 12 * y * y;
 }
 
-type_ GetIdeal(type_ x, type_ y) {
-	return pow(x, 4) + pow(y, 4);
+type_ GetIdeal(type_ x, type_ y, type_ t) {
+	return pow(x, 4) + pow(y, 4) + pow(t, 2);
 }
 
 
-void method(vector<type_>& a) {
+void method(vector<type_>& a, type_ time) {
 	int i, k;
 	// Получение информации о задаче
 	global = new double[MEMORY];	// выделение памяти
@@ -137,14 +138,16 @@ void method(vector<type_>& a) {
 	// Чтение сетки
 	ReadGrid();
 
-	// Чтение начального условия
-	ReadStartCond(a);
+	// Генерация начального условия
+	for (int i = 0; i < Ny; i++)
+		for (int j = 0; j < Nx; j++)
+			a.push_back(GetIdeal(GridX[j], GridY[i], time));
 	
 	// Сборка глобальной матрицы
-	assembling(a);
+	assembling(a, time);
 }
 
-void reinit_method(vector<type_> prev_resh) {
+void reinit_method(vector<type_> prev_resh, type_ time) {
 	int i, k;
 	// Получение информации о задаче
 	global = new double[MEMORY];	// выделение памяти
@@ -188,8 +191,10 @@ void reinit_method(vector<type_> prev_resh) {
 	GridX = sout + N;
 	GridY = GridX + Nx;
 
+	ReadGrid();
+
 	// Сборка глобальной матрицы
-	assembling(prev_resh);
+	assembling(prev_resh, time);
 
 }
 
@@ -198,16 +203,6 @@ void GetInfo() {
 	file >> Nx >> Ny >> count_t >> delta_time;
 	N = Nx * Ny;					// размер матрицу СЛАУ
 	file.close();
-}
-
-void ReadStartCond(vector<type_> &a) {
-	fstream fcin("start_cond.txt");
-	type_ val;
-
-	for (int j = 0; j < N; j++) {
-		fcin >> val;
-		a.push_back(val);
-	}
 }
 
 void ReadGrid() {
@@ -226,7 +221,7 @@ void ReadGrid() {
 	fileY.close();
 }
 
-void assembling(vector<type_> prev_resh) {
+void assembling(vector<type_> prev_resh, type_ time) {
 	int i, k, i1, k1;
 
 	int	Index[4];	// номера узлов
@@ -259,10 +254,10 @@ void assembling(vector<type_> prev_resh) {
 			gamma = GetGamma(px + hx / 2.0, y + hy / 2.0);
 
 			// значения правой части
-			fv[0] = GetF(px, y);
-			fv[1] = GetF(xp, y);
-			fv[2] = GetF(px, yp);
-			fv[3] = GetF(xp, yp);
+			fv[0] = GetF(px, y, time);
+			fv[1] = GetF(xp, y, time);
+			fv[2] = GetF(px, yp, time);
+			fv[3] = GetF(xp, yp, time);
 
 			// Задаём значения матрицы жёсткости
 			tmp = 1.0 / (hx * hy);
@@ -319,7 +314,7 @@ void assembling(vector<type_> prev_resh) {
 			C[3][2] = u1;
 			C[3][3] = ud;
 
-			//Задаём значения вектора правой части
+			//Задаём значения вектора правой части (перемножение c на f)
 			F[0] = C[0][0] * fv[0] + C[0][1] * fv[1] +
 				C[0][2] * fv[2] + C[0][3] * fv[3];
 			F[1] = C[1][0] * fv[0] + C[1][1] * fv[1] +
@@ -334,12 +329,18 @@ void assembling(vector<type_> prev_resh) {
 			Index[1] = Nx * k + i + 1;
 			Index[2] = Nx * (k + 1) + i;
 			Index[3] = Nx * (k + 1) + i + 1;
-
-			for (i1 = 0; i1 < 4; i1++)
-			{
+			
+			// Добавление в глобальную матрицу
+			for (i1 = 0; i1 < 4; i1++)	{
+				
 				for (k1 = 0; k1 < 4; k1++)
-					AddToMatrix(Index[i1], Index[k1], lambda * B[i1][k1] + gamma * C[i1][k1]);
-				f[Index[i1]] += F[i1];
+					AddToMatrix(Index[i1], Index[k1], lambda * B[i1][k1] + gamma * C[i1][k1] / delta_time);
+
+				// Вычисление правой части
+				type_ val = 0;
+				for (int z = 0; z < 4; z++)
+					val += C[i1][z] * prev_resh[z];
+				f[Index[i1]] += F[i1] + 1 / delta_time * val; 
 			}
 		}
 
@@ -349,10 +350,10 @@ void assembling(vector<type_> prev_resh) {
 		px = GridX[i];
 		y = GridY[0];
 		di[i] = 1.0e+50;
-		f[i] = 1.0e+50 * GetIdeal(px, y);
+		f[i] = 1.0e+50 * GetIdeal(px, y, time);
 		y = GridY[Ny - 1];
 		di[Nx * (Ny - 1) + i] = 1.0e+50;
-		f[Nx * (Ny - 1) + i] = 1.0e+50 * GetIdeal(px, y);
+		f[Nx * (Ny - 1) + i] = 1.0e+50 * GetIdeal(px, y, time);
 	}
 
 	for (k = 0; k < Ny; k++)			// параллельно оси Y
@@ -360,10 +361,10 @@ void assembling(vector<type_> prev_resh) {
 		y = GridY[k];
 		px = GridX[0];
 		di[k * Nx] = 1.0e+50;
-		f[k * Nx] = 1.0e+50 * GetIdeal(px, y);
+		f[k * Nx] = 1.0e+50 * GetIdeal(px, y, time);
 		px = GridX[Nx - 1];
 		di[(k + 1) * Nx - 1] = 1.0e+50;
-		f[(k + 1) * Nx - 1] = 1.0e+50 * GetIdeal(px, y);
+		f[(k + 1) * Nx - 1] = 1.0e+50 * GetIdeal(px, y, time);
 	}
 }
 
@@ -541,7 +542,7 @@ void run()
 	}
 }
 
-void result()
+void result(type_ time)
 {
 	int i, k, num = 0;
 	type_ px, y, func, res = 0.0, norm = 0.0, tmp;
@@ -556,7 +557,7 @@ void result()
 			px = GridX[i];
 			y = GridY[k];
 
-			func = GetIdeal(px, y); // действительное значение U
+			func = GetIdeal(px, y, time); // действительное значение U
 			tmp = fabs(x[num] - func);
 
 			res += tmp * tmp;
@@ -577,27 +578,26 @@ void result()
 //	Главная функция
 int main() {
 	setlocale(LC_CTYPE, "russian");
-	vector <vector<type_>> resh_u;
-	method(resh_u[0]);
+	vector <vector<type_>> resh_u(N_MAX);
+	method(resh_u[0], 0);
 
 	// Исключаем первый временной слой, потому что он является начальным
 	for (int i = 1; i < count_t; i++) {
 		run();
-		result();
+		result(i * delta_time);
 		
 		// Здесь перезапись результатов
 		for (int j = 0; j < N; j++)
 			resh_u[i].push_back(x[j]);
 		//
-		delete(global);
-		reinit_method(resh_u[i]); // реинициализация (сброс)
+		
+		reinit_method(resh_u[i - 1], i * delta_time); // реинициализация (сброс)
 	}
 
 	// Печать результата
-	for (int i = 0; i < resh_u.size(); i++)
-		for (int j = 0; j < resh_u[i].size(); j++)
-			;
-
+	for (int i = 0; i < count_t; i++)
+		for (int j = 0; j < N; j++)
+			cout << resh_u[i][j] << endl;
 
 	return 0;
 }

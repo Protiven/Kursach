@@ -19,4 +19,15 @@
       <Filter>Исходные файлы</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="Area.txt">
+      <Filter>Исходные файлы</Filter>
+    </Text>
+    <Text Include="GridX.txt">
+      <Filter>Исходные файлы</Filter>
+    </Text>
+    <Text Include="GridY.txt">
+      <Filter>Исходные файлы</Filter>
+    </Text>
+  </ItemGroup>
 </Project>
