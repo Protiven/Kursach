@@ -71,6 +71,7 @@ void    method(type_);				             // Сборка метода
 void    run();			                     // Выполнение метода	
 void    result(type_);                            // Вывод результата в файл     
 
+ofstream output("result.txt");
 
 //	Задание парамметров и функции
 type_ GetLambda(type_ x, type_ y) {
@@ -78,11 +79,11 @@ type_ GetLambda(type_ x, type_ y) {
 }
 
 type_ GetGamma(type_ x, type_ y) {
-	return 0;
+	return 1;
 }
 
 type_ GetF(type_ x, type_ y, type_ t) {
-	return -12 * x * x - 12 * y * y;
+	return -12 * x * x - 12 * y * y + pow(t, 2) * GetLambda(x, y) - 2 * t * GetGamma(x, y);
 }
 
 type_ GetIdeal(type_ x, type_ y, type_ t) {
@@ -150,7 +151,7 @@ void method(vector<type_>& a, type_ time) {
 void reinit_method(vector<type_> prev_resh, type_ time) {
 	int i, k;
 	// Получение информации о задаче
-	global = new double[MEMORY];	// выделение памяти
+	//global = new double[MEMORY];	// выделение памяти
 	memset(global, 0, MEMORY * sizeof(double));	// еe зануление
 
 	// Настройка указателей
@@ -547,7 +548,7 @@ void result(type_ time)
 	int i, k, num = 0;
 	type_ px, y, func, res = 0.0, norm = 0.0, tmp;
 
-	ofstream output("result.txt");
+
 	output << "X" << setw(STR + 8) << "Y" << setw(STR + 8)
 		<< "U" << setw(STR + 8) << "U*" << setw(STR + 8) << "U* - U" << endl;
 
@@ -572,15 +573,18 @@ void result(type_ time)
 			num++;
 		}
 	output << "\n ||U-U*|| / ||U*|| = " << scientific << sqrt(res / norm) << endl;
-	output.close();
+
 }
 
 //	Главная функция
 int main() {
 	setlocale(LC_CTYPE, "russian");
-	vector <vector<type_>> resh_u(N_MAX);
+	
+	vector <vector<type_>> resh_u(N_MAX); // Хранитель всех решений
 	method(resh_u[0], 0);
 
+
+	// Цикл по времени
 	// Исключаем первый временной слой, потому что он является начальным
 	for (int i = 1; i < count_t; i++) {
 		run();
@@ -594,10 +598,6 @@ int main() {
 		reinit_method(resh_u[i - 1], i * delta_time); // реинициализация (сброс)
 	}
 
-	// Печать результата
-	for (int i = 0; i < count_t; i++)
-		for (int j = 0; j < N; j++)
-			cout << resh_u[i][j] << endl;
-
+	output.close();
 	return 0;
 }
