@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <locale.h>
 #include <memory.h>
+#include <vector>
 #include "math.h"
 using namespace std;
 
@@ -39,19 +40,22 @@ type_* s;			// вспомогательный вектор
 type_* sout;		// вспомогательный вектор				
 
 type_  eps;		    // точность решения				
+type_ delta_time;
 
 int* ig;		    // портрет матрицы
 int* jg;		    // позиции элементов матрицы		
 int   N;			// размерность СЛАУ
 int	Nx;			// количество по Х				
-int   Ny;			// количество по Y				
-int   maxiter;	    // максимальное количествто итераций				
+int   Ny;			// количество по Y					
+int count_t;
+int stat_read = 0;
 
 int	LU();		    // функция факторизации		 
-void  assembling();	// cборка глобальной матрицы			
+void  assembling(vector<type_> prev_resh);	// cборка глобальной матрицы			
 void  GetInfo();	// получение параметов				
 void  ReadGrid();	// чтение сетки	
 
+void ReadStartCond(vector<type_>& a);       // Считывание начальных условий
 void    AddToMatrix(int, int, type_);	     // добаление в матрицу				
 type_    GetLambda(type_, type_);		         // коэффициент лямбда				
 type_    GetGamma(type_, type_);		         // коэффициент гамма		 
@@ -85,7 +89,7 @@ type_ GetIdeal(type_ x, type_ y) {
 }
 
 
-void method() {
+void method(vector<type_>& a) {
 	int i, k;
 	// Получение информации о задаче
 	global = new double[MEMORY];	// выделение памяти
@@ -133,15 +137,77 @@ void method() {
 	// Чтение сетки
 	ReadGrid();
 
+	// Чтение начального условия
+	ReadStartCond(a);
+	
 	// Сборка глобальной матрицы
-	assembling();
+	assembling(a);
+}
+
+void reinit_method(vector<type_> prev_resh) {
+	int i, k;
+	// Получение информации о задаче
+	global = new double[MEMORY];	// выделение памяти
+	memset(global, 0, MEMORY * sizeof(double));	// еe зануление
+
+	// Настройка указателей
+	ig = (int*)global;
+	jg = (int*)(global + N + 1);
+
+	// Генерация количества элементов матрицы
+	int istep = 0;
+	for (i = 0; i < N + 1; i++) {
+		ig[i] = istep;
+		istep += i;
+	}
+
+	// Генерация позиций элементов матрицы
+	istep = 0;
+	for (i = 0; i < N; i++)
+		for (k = 0; k < i; k++) {
+			jg[istep] = k;
+			istep++;
+		}
+
+	//	Настройка указателей
+	ggl = global + N + 1 + ig[N];
+	ggu = global + 2 * (ig[N]) + N + 1;
+	di = global + 3 * (ig[N]) + N + 1;
+
+	f = di + N;
+	r = f + N;
+	z = r + N;
+	p = z + N;
+	q = p + N;
+	diag = q + N;
+	L = diag + N;
+	U = L + ig[N];
+	x = U + ig[N];
+	s = x + N;
+	sout = s + N;
+	GridX = sout + N;
+	GridY = GridX + Nx;
+
+	// Сборка глобальной матрицы
+	assembling(prev_resh);
+
 }
 
 void GetInfo() {
 	ifstream file("Area.txt");
-	file >> Nx >> Ny;
+	file >> Nx >> Ny >> count_t >> delta_time;
 	N = Nx * Ny;					// размер матрицу СЛАУ
 	file.close();
+}
+
+void ReadStartCond(vector<type_> &a) {
+	fstream fcin("start_cond.txt");
+	type_ val;
+
+	for (int j = 0; j < N; j++) {
+		fcin >> val;
+		a.push_back(val);
+	}
 }
 
 void ReadGrid() {
@@ -160,7 +226,7 @@ void ReadGrid() {
 	fileY.close();
 }
 
-void assembling() {
+void assembling(vector<type_> prev_resh) {
 	int i, k, i1, k1;
 
 	int	Index[4];	// номера узлов
@@ -434,7 +500,7 @@ type_ sum(int i, int j)
 	return result;
 }
 
-//	Основная функция метода
+//	Решение слау
 void run()
 {
 	int iter;
@@ -489,11 +555,14 @@ void result()
 		{
 			px = GridX[i];
 			y = GridY[k];
-			func = GetIdeal(px, y);
+
+			func = GetIdeal(px, y); // действительное значение U
 			tmp = fabs(x[num] - func);
+
 			res += tmp * tmp;
 			norm += func * func;
 
+			// Печать результатов
 			output << setprecision(STR) << px
 				<< setw(STR + 8) << y
 				<< setw(STR + 8) << x[num]
@@ -508,8 +577,27 @@ void result()
 //	Главная функция
 int main() {
 	setlocale(LC_CTYPE, "russian");
-	method();
-	run();
-	result();
+	vector <vector<type_>> resh_u;
+	method(resh_u[0]);
+
+	// Исключаем первый временной слой, потому что он является начальным
+	for (int i = 1; i < count_t; i++) {
+		run();
+		result();
+		
+		// Здесь перезапись результатов
+		for (int j = 0; j < N; j++)
+			resh_u[i].push_back(x[j]);
+		//
+		delete(global);
+		reinit_method(resh_u[i]); // реинициализация (сброс)
+	}
+
+	// Печать результата
+	for (int i = 0; i < resh_u.size(); i++)
+		for (int j = 0; j < resh_u[i].size(); j++)
+			;
+
+
 	return 0;
 }
