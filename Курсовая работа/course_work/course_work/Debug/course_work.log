@@ -1,2 +1,5 @@
 ﻿  course_work.cpp
-  course_work.vcxproj -> C:\Users\Слава\Documents\GitHub\Kursach\Курсовая работа\course_work\Debug\course_work.exe
+C:\Users\Слава\Documents\GitHub\Kursach\Курсовая работа\course_work\course_work\course_work.cpp(150,27): error C2664: "void assembling(std::vector<type_,std::allocator<type_>>,type_)": невозможно преобразовать аргумент 1 из "std::vector<std::vector<type_,std::allocator<type_>>,std::allocator<std::vector<type_,std::allocator<type_>>>>" в "std::vector<type_,std::allocator<type_>>"
+C:\Users\Слава\Documents\GitHub\Kursach\Курсовая работа\course_work\course_work\course_work.cpp(150,13): message : Для выполнения данного преобразования нет доступного оператора преобразования, определенного пользователем, или вызов оператора невозможен
+C:\Users\Слава\Documents\GitHub\Kursach\Курсовая работа\course_work\course_work\course_work.cpp(56,7): message : см. объявление "assembling"
+C:\Users\Слава\Documents\GitHub\Kursach\Курсовая работа\course_work\course_work\course_work.cpp(354,42): error C2059: синтаксическая ошибка: ]
