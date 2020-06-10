@@ -50,6 +50,7 @@ int	Nx;			// количество по Х
 int   Ny;			// количество по Y					
 int count_t;
 int stat_read = 0;
+vector<type_> time_arr;
 
 int	LU();		    // функция факторизации		 
 void  assembling(vector<type_> prev_resh, type_);	// cборка глобальной матрицы			
@@ -71,6 +72,7 @@ void    method(type_);				             // Сборка метода
 void    run();			                     // Выполнение метода	
 void    result(type_);                            // Вывод результата в файл     
 
+
 ofstream output("result.txt");
 
 //	Задание парамметров и функции
@@ -83,15 +85,15 @@ type_ GetGamma(type_ x, type_ y) {
 }
 
 type_ GetF(type_ x, type_ y, type_ t) {
-	return -12 * x * x - 12 * y * y + pow(t, 2) * GetLambda(x, y) - 2 * t * GetGamma(x, y);
+	return 3 ;
 }
 
 type_ GetIdeal(type_ x, type_ y, type_ t) {
-	return pow(x, 4) + pow(y, 4) + pow(t, 2);
+	return  pow(x, 2) + pow(y, 2) + t;
 }
 
 
-void method(vector<type_>& a, type_ time) {
+void method(vector<type_>& a) {
 	int i, k;
 	// Получение информации о задаче
 	global = new double[MEMORY];	// выделение памяти
@@ -142,10 +144,10 @@ void method(vector<type_>& a, type_ time) {
 	// Генерация начального условия
 	for (int i = 0; i < Ny; i++)
 		for (int j = 0; j < Nx; j++)
-			a.push_back(GetIdeal(GridX[j], GridY[i], time));
+			a.push_back(GetIdeal(GridX[j], GridY[i], time_arr[0]));
 	
 	// Сборка глобальной матрицы
-	assembling(a, time);
+	assembling(a, time_arr[0]);
 }
 
 void reinit_method(vector<type_> prev_resh, type_ time) {
@@ -220,6 +222,15 @@ void ReadGrid() {
 	for (i = 0; i < Ny; i++)
 		fileY >> GridY[i];
 	fileY.close();
+
+	ifstream file_time("time.txt");
+	type_ val;
+	for (i = 0; i < count_t; i++) {
+		file_time >> val;
+		time_arr.push_back(val);
+	}
+	file_time.close();
+
 }
 
 void assembling(vector<type_> prev_resh, type_ time) {
@@ -340,7 +351,7 @@ void assembling(vector<type_> prev_resh, type_ time) {
 				// Вычисление правой части
 				type_ val = 0;
 				for (int z = 0; z < 4; z++)
-					val += C[i1][z] * prev_resh[z];
+					val += gamma * C[i1][z] * prev_resh[z];
 				f[Index[i1]] += F[i1] + 1 / delta_time * val; 
 			}
 		}
@@ -581,21 +592,21 @@ int main() {
 	setlocale(LC_CTYPE, "russian");
 	
 	vector <vector<type_>> resh_u(N_MAX); // Хранитель всех решений
-	method(resh_u[0], 0);
-
+	method(resh_u[0]);
+	
 
 	// Цикл по времени
 	// Исключаем первый временной слой, потому что он является начальным
 	for (int i = 1; i < count_t; i++) {
 		run();
-		result(i * delta_time);
+		result(time_arr[i] - time_arr[i - 1]);
 		
 		// Здесь перезапись результатов
 		for (int j = 0; j < N; j++)
 			resh_u[i].push_back(x[j]);
 		//
 		
-		reinit_method(resh_u[i - 1], i * delta_time); // реинициализация (сброс)
+		reinit_method(resh_u[i - 1], time_arr[i] - time_arr[i - 1]); // реинициализация (сброс)
 	}
 
 	output.close();
