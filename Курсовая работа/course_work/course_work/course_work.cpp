@@ -93,7 +93,7 @@ type_ GetIdeal(type_ x, type_ y, type_ t) {
 }
 
 
-void method(vector<type_>& a) {
+void method(vector <vector<type_>>& a) {
 	int i, k;
 	// Получение информации о задаче
 	global = new double[MEMORY];	// выделение памяти
@@ -144,7 +144,7 @@ void method(vector<type_>& a) {
 	// Генерация начального условия
 	for (int i = 0; i < Ny; i++)
 		for (int j = 0; j < Nx; j++)
-			a.push_back(GetIdeal(GridX[j], GridY[i], time_arr[0]));
+			a[0].push_back(GetIdeal(GridX[j], GridY[i], time_arr[0]));
 	
 	// Сборка глобальной матрицы
 	assembling(a, time_arr[0]);
@@ -233,7 +233,7 @@ void ReadGrid() {
 
 }
 
-void assembling(vector<type_> prev_resh, type_ time) {
+void assembling(vector<vector<type_>> prev_resh, type_ time) {
 	int i, k, i1, k1;
 
 	int	Index[4];	// номера узлов
@@ -592,7 +592,7 @@ int main() {
 	setlocale(LC_CTYPE, "russian");
 	
 	vector <vector<type_>> resh_u(N_MAX); // Хранитель всех решений
-	method(resh_u[0]);
+	method(resh_u);
 	
 
 	// Цикл по времени
