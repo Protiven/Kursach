@@ -351,7 +351,7 @@ void assembling(vector<vector<type_>> prev_resh, type_ time) {
 				// Вычисление правой части
 				type_ val = 0;
 				for (int z = 0; z < 4; z++)
-					val += gamma * C[i1][z] * prev_resh[z];
+					val += gamma * C[i1][z] * prev_resh[][z];
 				f[Index[i1]] += F[i1] + 1 / delta_time * val; 
 			}
 		}
